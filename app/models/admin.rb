@@ -1,3 +1,29 @@
+# == Schema Information
+#
+# Table name: admins
+#
+#  id                     :integer          not null, primary key
+#  name                   :string(255)
+#  username               :string(255)
+#  password               :string(255)
+#  salt                   :string(255)
+#  active                 :boolean          default(TRUE)
+#  notes                  :string(255)
+#  created_at             :datetime
+#  updated_at             :datetime
+#  email                  :string(255)      default(""), not null
+#  encrypted_password     :string(255)      default(""), not null
+#  reset_password_token   :string(255)
+#  reset_password_sent_at :datetime
+#  remember_created_at    :datetime
+#  sign_in_count          :integer          default(0), not null
+#  current_sign_in_at     :datetime
+#  last_sign_in_at        :datetime
+#  current_sign_in_ip     :string(255)
+#  last_sign_in_ip        :string(255)
+#  approved               :boolean          default(FALSE), not null
+#
+
 require 'digest/sha1'
 
 class Admin < ActiveRecord::Base
@@ -16,7 +42,7 @@ class Admin < ActiveRecord::Base
 	validates_format_of :name, :with => /[A-Za-z\d]([-\w]{,498}[A-Za-z\d])?/i, :message => "Invalid Name: Alphanumerics only"
 	validates_format_of :username, :with => /[A-Za-z\d]([-\w]{,498}[A-Za-z\d])?/i, :message => "Invalid Username: Alphanumerics only"
 
-	scope :sorted, order("admins.name ASC")
+	scope :sorted, -> { order("admins.name ASC") }
 
 	def active_for_authentication?
 		super && approved?

@@ -10,8 +10,16 @@ class PhishingFrenzyMailer < ActionMailer::Base
     phishing_url = @campaign.email_settings.phishing_url
     blast = @campaign.blasts.find(blast_id)
 
+    # We use a custom message and content ID to prevent leaking data
+    # about our phishing setup
+    mid = "<#{Mail.random_tag}@#{@campaign.email_settings.domain}.mail>"
+
     @campaign.template.images.each do |image|
       attachments.inline[image[:file]] = File.read(image.file.current_path)
+      # Only inline attachments have cids:
+      # https://github.com/mikel/mail/blob/master/lib/mail/part.rb#L42
+      cid = "<#{Mail.random_tag}@#{@campaign.email_settings.domain}>"
+      attachments[image[:file]].add_content_id(cid)
     end
 
     @campaign.template.file_attachments.each do |attachment|
@@ -26,27 +34,34 @@ class PhishingFrenzyMailer < ActionMailer::Base
 
     if @campaign.campaign_settings.track_uniq_visitors?
       @url = "#{phishing_url}?uid=#{uid}"
-      @image_url = "#{GlobalSettings.first.site_url}/reports/image/#{uid}.png"
+      @image_url = "#{phishing_url}/reports/image/#{uid}.png"
     else
       @url = phishing_url
       # Don't know a default non-tracking image?
-      @image_url = "#{GlobalSettings.first.site_url}/reports/image/000000.png"
+      @image_url = "#{phishing_url}/reports/image/000000.png"
     end
 
     mail_opts =  {
+        message_id: mid,
         to: @target.email_address,
         from: "\ #{@campaign.email_settings.display_from}\ \<#{@campaign.email_settings.from}\>",
         subject: @campaign.email_settings.subject,
         template_path: @campaign.template.email_template_path,
-        template_name: @campaign.template.email_files.first[:file],
+        template_name: @campaign.template.email_files.first[:file]
     }
 
     mail_opts[:reply_to] = @campaign.email_settings.reply_to unless @campaign.email_settings.reply_to.blank?
-
     case method
     when ACTIVE
       mail_opts[:delivery_method] = :smtp
-      bait = mail(mail_opts)
+      bait = mail(mail_opts) do |format|
+        format.html { render file: @campaign.template.email_files.first.file.path }
+        # TODO
+        # check if template has uploaded a TXT version of email and if so
+        # use the format.txt method below as well for higher spam scores
+        #
+        # format.txt { render file: @campaign.template.email_files.first.file.path }
+      end
       # if no authentication is selected send anonymous smtp
       if @campaign.email_settings.authentication == "none"
         bait.delivery_method.settings.merge!(campaign_anonymous_smtp_settings)
@@ -102,11 +117,12 @@ class PhishingFrenzyMailer < ActionMailer::Base
 
   def campaign_anonymous_smtp_settings
     {
-      :openssl_verify_mode => @campaign.email_settings.openssl_verify_mode_class,
+      openssl_verify_mode: @campaign.email_settings.openssl_verify_mode_class,
       address: @campaign.email_settings.smtp_server_out,
       port: @campaign.email_settings.smtp_port,
       enable_starttls_auto: @campaign.email_settings.enable_starttls_auto,
-      return_response: true
+      return_response: true,
+      domain: @campaign.email_settings.domain
     }
   end
 

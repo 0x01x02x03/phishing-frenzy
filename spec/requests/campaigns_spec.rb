@@ -152,7 +152,7 @@ RSpec.describe "Campaigns", :type => :request do
       click_on("Save Settings")
       expect(page).to have_content("Campaign Updated")
       click_on("Preview")
-      expect(page).to have_content("Campaign test email available for preview")
+      expect(page).to have_content("Letters")
     end
 
     it "test campaign email with a template assigned" do
@@ -192,6 +192,16 @@ RSpec.describe "Campaigns", :type => :request do
       click_on("Test")
       page.find("#recentBlasts > div > table > tbody > tr:nth-child(1) > td:nth-child(1) > a").click
       expect(page).to have_content("SMTP Logs")
+    end
+
+    it "reload campaign template when campaign is active" do
+      campaign = create(:campaign)
+      campaign.campaign_settings.fqdn = 'test.test.local'
+      campaign.campaign_settings.save!
+      campaign.update_attributes(active: true, template_id: Template.first.id)
+      visit campaign_path(campaign)
+      click_on 'Reload'
+      expect(page).to have_content("Campaign template successfully reloaded")
     end
   end
 

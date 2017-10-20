@@ -1,5 +1,21 @@
+# == Schema Information
+#
+# Table name: templates
+#
+#  id              :integer          not null, primary key
+#  campaign_id     :integer
+#  name            :string(255)
+#  description     :string(255)
+#  location        :string(255)
+#  notes           :string(255)
+#  created_at      :datetime
+#  updated_at      :datetime
+#  directory_index :string(255)
+#  admin_id        :integer
+#
+
 class Template < ActiveRecord::Base
-  include PublicActivity::Model
+	include PublicActivity::Model
 	tracked owner: ->(controller, model) { controller && controller.current_admin }
 	
 	belongs_to :admin
@@ -22,7 +38,7 @@ class Template < ActiveRecord::Base
 	end
 
 	def email_template_path
-		"../../public#{email_directory_url}"
+		"#{Rails.root}/public#{email_directory_url}"
 	end
 
 	def website_files
